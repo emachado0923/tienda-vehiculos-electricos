@@ -7,7 +7,7 @@ import { LogoMark } from "@/components/brand/logo";
 // Datos en vivo (stock, precios, sesión): renderizar siempre en cada petición
 export const dynamic = "force-dynamic";
 
-export const metadata: Metadata = { title: { default: "Admin", template: "%s | Admin Positive Energy" } };
+export const metadata: Metadata = { title: { default: "Admin", template: "%s | Admin E-Positive" } };
 
 const NAV = [
   { href: "/admin", label: "Resumen", icon: "📊" },
@@ -22,19 +22,19 @@ export default async function AdminLayout({ children }: { children: React.ReactN
 
   return (
     <div className="flex min-h-screen">
-      <aside className="hidden w-60 shrink-0 flex-col bg-forest-900 text-brand-100/80 md:flex">
+      <aside className="hidden w-60 shrink-0 flex-col bg-night-900 text-slate-300 md:flex">
         <Link href="/admin" className="flex h-16 items-center gap-2 px-5 text-white">
-          <LogoMark className="text-brand-500" />
+          <LogoMark className="text-white" />
           <span className="font-bold">Admin</span>
         </Link>
         <nav className="flex-1 space-y-1 px-3">
           {NAV.map((item) => (
-            <Link key={item.href} href={item.href} className="flex items-center gap-3 rounded-lg px-3 py-2 text-sm hover:bg-forest-800 hover:text-white">
+            <Link key={item.href} href={item.href} className="flex items-center gap-3 rounded-lg px-3 py-2 text-sm hover:bg-night-800 hover:text-white">
               <span>{item.icon}</span> {item.label}
             </Link>
           ))}
         </nav>
-        <div className="border-t border-forest-800 p-4 text-xs">
+        <div className="border-t border-night-800 p-4 text-xs">
           <p className="truncate">{admin.email}</p>
           <div className="mt-2 flex gap-3">
             <Link href="/" className="hover:text-white">Ver tienda</Link>

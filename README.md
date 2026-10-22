@@ -1,4 +1,4 @@
-# 🍃 Positive Energy — E-commerce de movilidad eléctrica y energía renovable
+# 🔋 E-Positive — E-commerce de movilidad eléctrica y energía renovable
 
 Tienda online para **accesorios de vehículos eléctricos** (cargadores, adaptadores Tipo 1/Tipo 2/CCS2, cables, organizadores) y **energía solar** (paneles, inversores híbridos, controladores MPPT, baterías LiFePO4).
 
