@@ -1,13 +1,21 @@
 import { cn } from "@/lib/utils";
 
-/** Isotipo de Positive Energy: hoja verde con un rayo blanco. */
+/**
+ * Isotipo de E-Positive: batería con una celda ámbar marcada con "E" y el
+ * signo "+" del polo positivo. El contorno usa `currentColor` para adaptarse
+ * a fondos claros u oscuros; la celda conserva siempre el ámbar de marca.
+ */
 export function LogoMark({ className }: { className?: string }) {
   return (
-    <svg viewBox="0 0 32 32" className={cn("h-8 w-8", className)} aria-hidden="true">
-      {/* Hoja: punta superior y base redondeada */}
-      <path d="M16 1.5C24.5 7 28 14.5 26 21.5 24.5 26.8 20.6 30 16 30.5 11.4 30 7.5 26.8 6 21.5 4 14.5 7.5 7 16 1.5Z" fill="currentColor" />
-      {/* Rayo */}
-      <path d="M17.6 7.5 11.2 18.2h4.4l-1.4 7.3 6.6-10.9h-4.5l1.3-7.1Z" fill="#fff" />
+    <svg viewBox="0 0 48 28" className={cn("h-7 w-12", className)} aria-hidden="true">
+      {/* Cuerpo y borne de la batería */}
+      <rect x="1.5" y="1.5" width="40" height="25" rx="5" fill="none" stroke="currentColor" strokeWidth="3" />
+      <rect x="43" y="9" width="4" height="10" rx="1.5" fill="currentColor" />
+      {/* Celda cargada con la "E" */}
+      <rect x="6" y="6" width="18" height="16" rx="2" fill="#f5a524" />
+      <path d="M11 8.3h8v2.4h-5.2v2.1h4.6v2.3h-4.6v2.4h5.2v2.4H11z" fill="#151b26" />
+      {/* Polo positivo */}
+      <path d="M31.6 9h2.8v3.6H38v2.8h-3.6V19h-2.8v-3.6H28v-2.8h3.6z" fill="currentColor" />
     </svg>
   );
 }
@@ -20,20 +28,20 @@ type LogoProps = {
   className?: string;
 };
 
-/** Logotipo completo: isotipo + "positive energy". */
+/** Logotipo completo: batería + "E-POSITIVE". */
 export function Logo({ variant = "light", withTagline = false, className }: LogoProps) {
   const dark = variant === "dark";
   return (
     <span className={cn("flex items-center gap-2.5", className)}>
-      <LogoMark className={cn("h-9 w-9", dark ? "text-brand-500" : "text-brand-600")} />
+      <LogoMark className={dark ? "text-white" : "text-ink"} />
       <span className="flex flex-col leading-none">
-        <span className="text-lg tracking-tight">
-          <span className={cn("font-extrabold", dark ? "text-white" : "text-ink")}>positive</span>{" "}
-          <span className={cn("font-medium", dark ? "text-brand-100" : "text-brand-600")}>energy</span>
+        <span className={cn("text-lg font-extrabold tracking-[0.12em] uppercase", dark ? "text-white" : "text-ink")}>
+          E-Positive
         </span>
         {withTagline && (
-          <span className={cn("mt-1 text-[0.6rem] font-medium tracking-[0.18em] uppercase", dark ? "text-brand-100/70" : "text-slate-500")}>
-            Movilidad eléctrica · Energía limpia
+          <span className="mt-1 text-[0.6rem] font-semibold tracking-[0.16em] uppercase">
+            <span className={dark ? "text-brand-400" : "text-brand-700"}>Carga · Accesorios</span>
+            <span className={dark ? "text-slate-400" : "text-slate-500"}> · Energía limpia</span>
           </span>
         )}
       </span>

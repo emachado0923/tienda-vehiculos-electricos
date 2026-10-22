@@ -31,7 +31,7 @@ export function Pagination({ page, pageCount, basePath, searchParams }: Props) {
           aria-current={p === page ? "page" : undefined}
           className={cn(
             "flex h-9 min-w-9 items-center justify-center rounded-lg px-3 text-sm font-medium",
-            p === page ? "bg-brand-600 text-white" : "text-slate-600 hover:bg-slate-200",
+            p === page ? "bg-brand-500 text-ink" : "text-slate-600 hover:bg-slate-200",
           )}
         >
           {p}

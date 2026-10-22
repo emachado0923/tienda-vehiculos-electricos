@@ -252,7 +252,7 @@ model OrderItem {
 
 model SiteConfig {
   id        Int     @id @default(1)
-  storeName String  @default("Positive Energy")
+  storeName String  @default("E-Positive")
   logoUrl   String?
 
   // Banner principal (hero)

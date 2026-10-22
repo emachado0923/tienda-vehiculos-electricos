@@ -17,7 +17,7 @@ export default async function HomePage() {
   return (
     <>
       {/* Hero administrable desde /admin/configuracion */}
-      <section className="relative overflow-hidden bg-forest-900 text-white">
+      <section className="relative overflow-hidden bg-night-900 text-white">
         {config.heroImageUrl && (
           <Image src={config.heroImageUrl} alt="" fill priority sizes="100vw" className="object-cover opacity-40" />
         )}

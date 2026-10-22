@@ -14,7 +14,7 @@ export function SiteFooter({ config }: { config: SiteConfig }) {
   ].filter((s): s is { label: string; url: string } => Boolean(s.url));
 
   return (
-    <footer className="mt-16 bg-forest-900 text-brand-100/80">
+    <footer className="mt-16 bg-night-900 text-slate-300">
       <div className="mx-auto grid max-w-7xl gap-8 px-4 py-12 sm:grid-cols-2 lg:grid-cols-4">
         <div>
           <Logo variant="dark" withTagline />
@@ -52,7 +52,7 @@ export function SiteFooter({ config }: { config: SiteConfig }) {
           </div>
         )}
       </div>
-      <p className="border-t border-forest-800 py-4 text-center text-xs text-brand-100/50">
+      <p className="border-t border-night-800 py-4 text-center text-xs text-slate-500">
         © {new Date().getFullYear()} {config.storeName}. Todos los derechos reservados.
       </p>
     </footer>
