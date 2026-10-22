@@ -1,0 +1,32 @@
+@import "tailwindcss";
+
+/* Tokens de marca Positive Energy: verde hoja + verde bosque profundo */
+@theme {
+  --color-brand-50: #eef8f2;
+  --color-brand-100: #d5efdf;
+  --color-brand-500: #2fae6b;
+  --color-brand-600: #23955a;
+  --color-brand-700: #1b7547;
+  --color-forest-900: #12352a; /* fondos oscuros (footer, admin) */
+  --color-forest-800: #1a4536;
+  --color-ink: #10231c; /* texto del logotipo */
+  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+}
+
+@layer components {
+  .btn-primary {
+    @apply inline-flex items-center justify-center gap-2 rounded-lg bg-brand-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-brand-700 disabled:cursor-not-allowed disabled:opacity-60;
+  }
+  .btn-secondary {
+    @apply inline-flex items-center justify-center gap-2 rounded-lg border border-slate-300 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 disabled:opacity-60;
+  }
+  .input {
+    @apply block w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 shadow-sm placeholder:text-slate-400 focus:border-brand-500 focus:ring-2 focus:ring-brand-500/30 focus:outline-none;
+  }
+  .label {
+    @apply mb-1 block text-sm font-medium text-slate-700;
+  }
+  .card {
+    @apply rounded-xl border border-slate-200 bg-white shadow-sm;
+  }
+}
