@@ -1,0 +1,284 @@
+// =============================================================
+//  Esquema de base de datos — Tienda de Movilidad Eléctrica
+//  Motor: MySQL · ORM: Prisma
+// =============================================================
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+// -------------------------------------------------------------
+//  Enums
+// -------------------------------------------------------------
+
+enum Role {
+  CUSTOMER
+  ADMIN
+}
+
+/// Línea de negocio a la que pertenece una categoría.
+enum CategoryKind {
+  EV_ACCESSORY // Accesorios para vehículos eléctricos (mercado principal)
+  RENEWABLE_ENERGY // Soluciones de energía renovable (categoría secundaria)
+}
+
+/// Estándares de conector para carga de EVs (filtro del catálogo).
+enum ConnectorType {
+  TYPE1 // SAE J1772
+  TYPE2 // Mennekes / IEC 62196-2
+  CCS1
+  CCS2
+  CHADEMO
+  GBT
+  NACS // Tesla
+}
+
+/// Tecnología de panel solar (filtro del catálogo).
+enum PanelType {
+  MONOCRYSTALLINE
+  POLYCRYSTALLINE
+  BIFACIAL
+  THIN_FILM
+}
+
+/// Tipo de inversor (filtro del catálogo).
+enum InverterType {
+  HYBRID
+  ON_GRID
+  OFF_GRID
+  MICROINVERTER
+}
+
+enum OrderStatus {
+  PENDING // Creado, esperando pago
+  PAID // Pago confirmado
+  PROCESSING // En preparación / bodega
+  SHIPPED // Despachado a la transportadora
+  DELIVERED // Entregado al cliente
+  CANCELLED
+  REFUNDED
+}
+
+enum PaymentStatus {
+  PENDING
+  APPROVED
+  DECLINED
+  REFUNDED
+}
+
+enum PaymentMethod {
+  CARD
+  PSE
+  PAYPAL
+  STRIPE
+}
+
+// -------------------------------------------------------------
+//  Usuarios y direcciones
+// -------------------------------------------------------------
+
+model User {
+  id           String    @id @default(cuid())
+  name         String?
+  email        String    @unique
+  passwordHash String
+  role         Role      @default(CUSTOMER)
+  phone        String?
+  addresses    Address[]
+  orders       Order[]
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+}
+
+model Address {
+  id         String   @id @default(cuid())
+  userId     String
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  label      String?  @db.VarChar(60) // "Casa", "Oficina"...
+  fullName   String
+  phone      String
+  line1      String
+  line2      String?
+  city       String
+  state      String // Departamento / Estado
+  postalCode String?
+  country    String   @default("CO") @db.Char(2)
+  isDefault  Boolean  @default(false)
+  createdAt  DateTime @default(now())
+
+  @@index([userId])
+}
+
+// -------------------------------------------------------------
+//  Catálogo
+// -------------------------------------------------------------
+
+model Category {
+  id          String       @id @default(cuid())
+  name        String
+  slug        String       @unique
+  description String?      @db.Text
+  kind        CategoryKind
+  imageUrl    String?
+
+  // Jerarquía opcional (ej. "Cargadores" > "Cargadores de pared")
+  parentId String?
+  parent   Category?  @relation("CategoryTree", fields: [parentId], references: [id], onDelete: SetNull)
+  children Category[] @relation("CategoryTree")
+
+  products  Product[]
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  @@index([kind])
+}
+
+model Product {
+  id               String   @id @default(cuid())
+  sku              String   @unique @db.VarChar(64)
+  slug             String   @unique
+  title            String
+  shortDescription String?  @db.VarChar(300)
+  description      String   @db.Text
+  price            Decimal  @db.Decimal(12, 2)
+  compareAtPrice   Decimal? @db.Decimal(12, 2) // Precio "antes" para mostrar descuento
+  stock            Int      @default(0)
+  isActive         Boolean  @default(true)
+  isFeatured       Boolean  @default(false)
+  brand            String?
+
+  categoryId String
+  category   Category @relation(fields: [categoryId], references: [id], onDelete: Restrict)
+
+  images ProductImage[]
+
+  // --- Atributos técnicos indexados (usados por los filtros avanzados) ---
+  connectorType ConnectorType? // Accesorios EV
+  powerKw       Decimal?       @db.Decimal(8, 2) // Potencia de carga / potencia nominal
+  panelType     PanelType? // Paneles solares
+  inverterType  InverterType? // Inversores
+
+  /// Especificaciones libres clave/valor, ej:
+  /// { "Corriente": "32 A", "Fases": "Trifásica", "Longitud cable": "5 m", "IP": "IP65" }
+  specs Json?
+
+  orderItems OrderItem[]
+  createdAt  DateTime    @default(now())
+  updatedAt  DateTime    @updatedAt
+
+  @@index([categoryId])
+  @@index([connectorType])
+  @@index([powerKw])
+  @@index([panelType])
+  @@index([inverterType])
+  @@index([isActive, isFeatured])
+}
+
+model ProductImage {
+  id        String  @id @default(cuid())
+  productId String
+  product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+  url       String  @db.VarChar(1000)
+  alt       String?
+  position  Int     @default(0)
+
+  @@index([productId])
+}
+
+// -------------------------------------------------------------
+//  Pedidos
+// -------------------------------------------------------------
+
+model Order {
+  id     String @id @default(cuid())
+  number Int    @unique @default(autoincrement()) // Número legible: #1001...
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Restrict)
+
+  status        OrderStatus   @default(PENDING)
+  paymentStatus PaymentStatus @default(PENDING)
+  paymentMethod PaymentMethod
+  paymentRef    String? // ID de transacción devuelto por la pasarela
+
+  subtotal    Decimal @db.Decimal(12, 2)
+  shippingFee Decimal @default(0) @db.Decimal(12, 2)
+  tax         Decimal @default(0) @db.Decimal(12, 2)
+  total       Decimal @db.Decimal(12, 2)
+  currency    String  @default("COP") @db.Char(3)
+
+  /// Copia inmutable de la dirección de envío al momento de la compra
+  shippingAddress Json
+
+  trackingNumber String?
+  carrier        String?
+  notes          String? @db.Text
+
+  items     OrderItem[]
+  createdAt DateTime    @default(now())
+  updatedAt DateTime    @updatedAt
+
+  @@index([userId])
+  @@index([status])
+}
+
+model OrderItem {
+  id      String @id @default(cuid())
+  orderId String
+  order   Order  @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  productId String?
+  product   Product? @relation(fields: [productId], references: [id], onDelete: SetNull)
+
+  // Snapshot del producto: el pedido no cambia si luego se edita el producto
+  title     String
+  sku       String  @db.VarChar(64)
+  imageUrl  String? @db.VarChar(1000)
+  unitPrice Decimal @db.Decimal(12, 2)
+  quantity  Int
+
+  @@index([orderId])
+  @@index([productId])
+}
+
+// -------------------------------------------------------------
+//  Configuración del sitio (registro único, id = 1)
+// -------------------------------------------------------------
+
+model SiteConfig {
+  id        Int     @id @default(1)
+  storeName String  @default("Positive Energy")
+  logoUrl   String?
+
+  // Banner principal (hero)
+  heroTitle    String  @default("Carga tu futuro eléctrico")
+  heroSubtitle String? @db.VarChar(300)
+  heroImageUrl String? @db.VarChar(1000)
+  heroCtaText  String? @default("Ver catálogo")
+  heroCtaUrl   String? @default("/productos")
+
+  // Contacto
+  contactEmail String?
+  contactPhone String?
+  whatsapp     String?
+  address      String?
+
+  // Redes sociales
+  facebookUrl  String?
+  instagramUrl String?
+  xUrl         String?
+  youtubeUrl   String?
+  tiktokUrl    String?
+  linkedinUrl  String?
+
+  // Comercial
+  freeShippingThreshold Decimal? @db.Decimal(12, 2)
+  flatShippingFee       Decimal  @default(0) @db.Decimal(12, 2)
+
+  updatedAt DateTime @updatedAt
+}
