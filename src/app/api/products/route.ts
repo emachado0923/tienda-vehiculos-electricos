@@ -4,6 +4,7 @@ import { getAdminOrNull } from "@/lib/auth-guards";
 import { getProducts, parseProductFilters } from "@/lib/queries/products";
 import { productSchema } from "@/lib/validations/product";
 import { createProduct, productErrorMessage } from "@/lib/services/products";
+import { findInvalidImageUrl } from "@/lib/services/image-check";
 
 /**
  * GET /api/products
@@ -37,6 +38,11 @@ export async function POST(request: NextRequest) {
       { error: "Validación fallida", details: z.flattenError(parsed.error).fieldErrors },
       { status: 422 },
     );
+  }
+
+  const imageError = await findInvalidImageUrl(parsed.data.images);
+  if (imageError) {
+    return NextResponse.json({ error: imageError }, { status: 422 });
   }
 
   try {

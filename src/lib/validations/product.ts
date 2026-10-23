@@ -37,8 +37,19 @@ export const productSchema = z.object({
   panelType: z.preprocess(emptyToUndefined, z.enum(PanelType).optional()),
   inverterType: z.preprocess(emptyToUndefined, z.enum(InverterType).optional()),
 
-  /** URLs de imágenes en orden (la primera es la principal). */
-  images: z.array(z.string().url("URL de imagen inválida")).max(10).default([]),
+  /**
+   * Imágenes en orden (la primera es la principal): URL absoluta https o
+   * ruta local servida desde /public (ej. "/products/wallbox.svg").
+   */
+  images: z
+    .array(
+      z.string().refine(
+        (v) => (v.startsWith("/") && !v.startsWith("//")) || (v.startsWith("https://") && URL.canParse(v)),
+        "Usa una URL https:// o una ruta local que empiece por /",
+      ),
+    )
+    .max(10)
+    .default([]),
   /** Especificaciones técnicas clave/valor. */
   specs: z.record(z.string(), z.string()).default({}),
 });
