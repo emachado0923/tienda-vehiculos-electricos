@@ -225,7 +225,82 @@ Los correos se envían con `after()` de Next.js, sin hacer esperar al cliente.
 - **/admin/categorias:** crear, editar y eliminar categorías y subcategorías (2 niveles). Una categoría con
   productos no se puede eliminar; filtrar por una categoría principal incluye sus subcategorías.
 
-## 9. Próximos pasos sugeridos
+## 9. Despliegue en Google Cloud Run
+
+Archivos: `Dockerfile` (Next.js `standalone`), `docker-entrypoint.sh` (aplica migraciones al arrancar
+y, opcionalmente, el seed) y `cloudbuild.yaml` (build → Artifact Registry → Cloud Run).
+
+### 9.1 Configuración inicial (una sola vez)
+
+```bash
+PROJECT=mi-proyecto            # ID de tu proyecto de GCP
+REGION=us-central1
+gcloud config set project $PROJECT
+gcloud services enable run.googleapis.com cloudbuild.googleapis.com artifactregistry.googleapis.com \
+  sqladmin.googleapis.com secretmanager.googleapis.com storage.googleapis.com
+
+# Repositorio de imágenes
+gcloud artifacts repositories create epositive --repository-format=docker --location=$REGION
+
+# Base de datos Cloud SQL (MySQL 8)
+gcloud sql instances create tienda-mysql --database-version=MYSQL_8_0 --tier=db-f1-micro --region=$REGION
+gcloud sql databases create tienda_ev --instance=tienda-mysql --charset=utf8mb4 --collation=utf8mb4_unicode_ci
+gcloud sql users create tienda --instance=tienda-mysql --password='CLAVE_SEGURA'
+
+# Secretos (Cloud Run se conecta a Cloud SQL por socket Unix)
+printf 'mysql://tienda:CLAVE_SEGURA@localhost/tienda_ev?socket=/cloudsql/%s:%s:tienda-mysql' $PROJECT $REGION \
+  | gcloud secrets create DATABASE_URL --data-file=-
+openssl rand -base64 32 | tr -d '\n' | gcloud secrets create AUTH_SECRET --data-file=-
+
+# Bucket público para imágenes subidas desde el admin
+gcloud storage buckets create gs://epositive-uploads --location=$REGION --uniform-bucket-level-access
+gcloud storage buckets add-iam-policy-binding gs://epositive-uploads --member=allUsers --role=roles/storage.objectViewer
+
+# Permisos de la cuenta de servicio (por defecto Cloud Build y Cloud Run usan la de Compute Engine)
+SA="$(gcloud projects describe $PROJECT --format='value(projectNumber)')-compute@developer.gserviceaccount.com"
+for ROLE in roles/run.admin roles/iam.serviceAccountUser roles/artifactregistry.writer roles/logging.logWriter \
+            roles/secretmanager.secretAccessor roles/cloudsql.client; do
+  gcloud projects add-iam-policy-binding $PROJECT --member="serviceAccount:$SA" --role=$ROLE
+done
+gcloud storage buckets add-iam-policy-binding gs://epositive-uploads --member="serviceAccount:$SA" --role=roles/storage.objectAdmin
+```
+
+### 9.2 Desplegar
+
+```bash
+gcloud builds submit --config cloudbuild.yaml \
+  --substitutions=_CLOUDSQL_INSTANCE=$PROJECT:$REGION:tienda-mysql,_GCS_BUCKET=epositive-uploads
+```
+
+También puedes crear un **trigger** de Cloud Build conectado a GitHub (rama `main`) con esas mismas
+sustituciones para desplegar en cada `git push`.
+
+**Primer despliegue — crear el administrador y los datos de ejemplo:**
+
+```bash
+gcloud run services update tienda-epositive --region=$REGION \
+  --update-env-vars=RUN_SEED=true,SEED_ADMIN_EMAIL=tu@correo.com,SEED_ADMIN_PASSWORD='OtraClaveSegura1'
+# Cuando el servicio arranque, quita las variables del seed:
+gcloud run services update tienda-epositive --region=$REGION --remove-env-vars=RUN_SEED,SEED_ADMIN_EMAIL,SEED_ADMIN_PASSWORD
+```
+
+**Variables opcionales** (`gcloud run services update … --update-env-vars=…`): `APP_URL`
+(sustitución `_APP_URL`), `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `MAIL_FROM` y `SMTP_PASS`
+(mejor como secreto con `--update-secrets=SMTP_PASS=SMTP_PASS:latest`).
+
+### 9.3 Probar la imagen localmente
+
+```bash
+docker build -t epositive .
+# Detrás de un proxy corporativo con inspección TLS, pasa sus certificados (no quedan en la imagen):
+#   node -e "require('fs').writeFileSync('ca.pem', require('tls').getCACertificates('system').join('\n'))"
+#   docker build --secret id=extra_ca,src=ca.pem -t epositive .
+docker run -p 8080:8080 \
+  -e DATABASE_URL="mysql://root:password@host.docker.internal:3306/tienda_ev" \
+  -e AUTH_SECRET="un-secreto-largo" -e AUTH_TRUST_HOST=true epositive
+```
+
+## 10. Próximos pasos sugeridos
 
 - Pasarela de pago real con webhooks (Wompi / Stripe).
 - Recuperación de contraseña por correo ("¿Olvidaste tu contraseña?").

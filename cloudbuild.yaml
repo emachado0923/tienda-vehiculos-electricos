@@ -1,0 +1,69 @@
+# =============================================================
+#  Cloud Build → Artifact Registry → Cloud Run
+#
+#  Ejecución manual:
+#    gcloud builds submit --config cloudbuild.yaml \
+#      --substitutions=_CLOUDSQL_INSTANCE=PROYECTO:us-central1:tienda-mysql,_GCS_BUCKET=epositive-uploads
+#
+#  Requisitos previos (una sola vez): ver README → "Despliegue en Google Cloud Run".
+#  Secretos en Secret Manager: DATABASE_URL y AUTH_SECRET.
+# =============================================================
+
+substitutions:
+  _REGION: us-central1
+  _REPOSITORY_NAME: epositive          # repositorio Docker en Artifact Registry
+  _IMAGE_NAME: tienda
+  _SERVICE_NAME: tienda-epositive      # servicio de Cloud Run
+  _PORT: "8080"
+  _CLOUDSQL_INSTANCE: ""               # PROYECTO:REGION:INSTANCIA (vacío = sin Cloud SQL)
+  _GCS_BUCKET: ""                      # bucket para imágenes subidas (vacío = disco efímero)
+  _APP_URL: ""                         # URL pública (enlaces en correos), ej. https://tienda.epositive.co
+
+options:
+  logging: CLOUD_LOGGING_ONLY          # requerido al usar cuentas de servicio personalizadas
+  dynamic_substitutions: true
+
+steps:
+  # 1. Construir la imagen (etiquetas: ID del build y latest)
+  - id: build
+    name: gcr.io/cloud-builders/docker
+    args:
+      - build
+      - -t
+      - ${_REGION}-docker.pkg.dev/$PROJECT_ID/${_REPOSITORY_NAME}/${_IMAGE_NAME}:$BUILD_ID
+      - -t
+      - ${_REGION}-docker.pkg.dev/$PROJECT_ID/${_REPOSITORY_NAME}/${_IMAGE_NAME}:latest
+      - .
+
+  # 2. Publicar en Artifact Registry
+  - id: push
+    name: gcr.io/cloud-builders/docker
+    args: ["push", "--all-tags", "${_REGION}-docker.pkg.dev/$PROJECT_ID/${_REPOSITORY_NAME}/${_IMAGE_NAME}"]
+
+  # 3. Desplegar en Cloud Run. Las migraciones de Prisma se aplican al
+  #    arrancar el contenedor (docker-entrypoint.sh).
+  - id: deploy
+    name: gcr.io/google.com/cloudsdktool/cloud-sdk:slim
+    entrypoint: bash
+    args:
+      - -c
+      - |
+        set -euo pipefail
+        ENV_VARS="AUTH_TRUST_HOST=true"
+        if [ -n "${_GCS_BUCKET}" ]; then ENV_VARS="$${ENV_VARS},GCS_BUCKET=${_GCS_BUCKET}"; fi
+        if [ -n "${_APP_URL}" ]; then ENV_VARS="$${ENV_VARS},APP_URL=${_APP_URL}"; fi
+        FLAGS=(
+          --image=${_REGION}-docker.pkg.dev/$PROJECT_ID/${_REPOSITORY_NAME}/${_IMAGE_NAME}:$BUILD_ID
+          --region=${_REGION}
+          --port=${_PORT}
+          --allow-unauthenticated
+          --memory=1Gi
+          --update-secrets=DATABASE_URL=DATABASE_URL:latest,AUTH_SECRET=AUTH_SECRET:latest
+          --update-env-vars=$${ENV_VARS}
+        )
+        if [ -n "${_CLOUDSQL_INSTANCE}" ]; then FLAGS+=(--add-cloudsql-instances=${_CLOUDSQL_INSTANCE}); fi
+        gcloud run deploy ${_SERVICE_NAME} "$${FLAGS[@]}"
+
+images:
+  - ${_REGION}-docker.pkg.dev/$PROJECT_ID/${_REPOSITORY_NAME}/${_IMAGE_NAME}:$BUILD_ID
+  - ${_REGION}-docker.pkg.dev/$PROJECT_ID/${_REPOSITORY_NAME}/${_IMAGE_NAME}:latest

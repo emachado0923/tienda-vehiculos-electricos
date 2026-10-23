@@ -1,0 +1,20 @@
+# Se instalan/generan dentro de la imagen
+node_modules
+.next
+dist
+
+# Secretos y datos locales: NUNCA dentro de la imagen
+.env
+.env*.local
+storage
+
+# Control de versiones, editor y documentación
+.git
+.gitignore
+.vscode
+.idea
+*.md
+!README.md
+cloudbuild.yaml
+Dockerfile
+.dockerignore

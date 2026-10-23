@@ -4,15 +4,16 @@ import { mkdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 
 /**
- * Almacenamiento de archivos subidos (imágenes de productos).
+ * Almacenamiento de archivos subidos (imágenes de productos). Dos drivers:
  *
- * Driver local: guarda en UPLOAD_DIR (por defecto ./storage/uploads, fuera
- * de /public porque Next.js no sirve en producción archivos agregados a
- * /public después del build) y se sirven por la ruta /uploads/[...path].
+ * - Google Cloud Storage (si GCS_BUCKET está definido) — para Cloud Run,
+ *   cuyo disco es efímero. Devuelve https://storage.googleapis.com/<bucket>/…
+ *   El bucket debe permitir lectura pública (roles/storage.objectViewer a allUsers).
+ *   En Cloud Run las credenciales salen de la cuenta de servicio del servicio.
  *
- * Para producción en serverless (Vercel) el disco es efímero: reemplaza
- * `saveUpload` por un driver de Cloudinary / S3 / UploadThing que devuelva
- * la URL https pública; el resto de la app no cambia.
+ * - Local (por defecto): guarda en UPLOAD_DIR (./storage/uploads, fuera de
+ *   /public porque Next.js no sirve en producción archivos agregados a
+ *   /public después del build) y se sirven por la ruta /uploads/[...path].
  */
 
 export const UPLOAD_DIR = path.resolve(/*turbopackIgnore: true*/ process.env.UPLOAD_DIR ?? "storage/uploads");
@@ -47,6 +48,19 @@ export async function saveUpload(file: File): Promise<string> {
   const now = new Date();
   const folder = path.join(String(now.getFullYear()), String(now.getMonth() + 1).padStart(2, "0"));
   const fileName = `${randomUUID()}.${type.ext}`;
+
+  const bucketName = process.env.GCS_BUCKET;
+  if (bucketName) {
+    const objectName = `uploads/${folder.replaceAll(path.sep, "/")}/${fileName}`;
+    // Import dinámico: el SDK solo se carga cuando se usa GCS
+    const { Storage } = await import("@google-cloud/storage");
+    await new Storage().bucket(bucketName).file(objectName).save(buffer, {
+      contentType: type.mime,
+      resumable: false,
+      metadata: { cacheControl: "public, max-age=31536000, immutable" },
+    });
+    return `https://storage.googleapis.com/${bucketName}/${objectName}`;
+  }
 
   await mkdir(path.join(/*turbopackIgnore: true*/ UPLOAD_DIR, folder), { recursive: true });
   await writeFile(path.join(/*turbopackIgnore: true*/ UPLOAD_DIR, folder, fileName), buffer);
