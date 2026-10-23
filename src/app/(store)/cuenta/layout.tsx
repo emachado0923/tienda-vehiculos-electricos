@@ -10,6 +10,7 @@ export default async function AccountLayout({ children }: { children: React.Reac
         <nav className="flex gap-2 md:flex-col">
           <Link href="/cuenta" className="rounded-lg px-3 py-2 text-sm font-medium hover:bg-slate-200">Mis pedidos</Link>
           <Link href="/cuenta/direcciones" className="rounded-lg px-3 py-2 text-sm font-medium hover:bg-slate-200">Direcciones</Link>
+          <Link href="/cuenta/seguridad" className="rounded-lg px-3 py-2 text-sm font-medium hover:bg-slate-200">Seguridad</Link>
         </nav>
         <div>{children}</div>
       </div>

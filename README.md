@@ -175,6 +175,8 @@ npm run dev            # http://localhost:3000
 |---|---|---|---|
 | GET | `/api/products` | Público | Lista paginada. Filtros: `q`, `category`, `kind`, `connector` (CSV), `power` (`min-max`), `panel`, `inverter`, `minPrice`, `maxPrice`, `inStock=1`, `sort`, `page`, `pageSize` |
 | POST | `/api/products` | ADMIN | Crea un producto (JSON validado con `productSchema`) |
+| POST | `/api/uploads` | ADMIN | Sube imágenes (`multipart/form-data`, campo `files`, máx. 10 × 5 MB) → `{ urls }` |
+| GET | `/uploads/…` | Público | Sirve las imágenes subidas |
 
 ```bash
 curl "http://localhost:3000/api/products?connector=TYPE2,CCS2&power=7.4-22&sort=price_asc"
@@ -190,11 +192,42 @@ curl "http://localhost:3000/api/products?connector=TYPE2,CCS2&power=7.4-22&sort=
 
 El estado definitivo del pago debe confirmarse por **webhook**, no por la respuesta síncrona.
 
-## 6. Próximos pasos sugeridos
+## 6. Imágenes de productos
 
-- Subida de imágenes a S3 / Cloudinary / UploadThing (hoy se registran por URL `https://…` o ruta local `/…` en `public/`).
-  Las imágenes del catálogo de ejemplo son ilustraciones SVG propias en `public/products/`,
-  generadas con `node scripts/generate-product-images.mjs`.
-- Webhooks de pago reales y correos transaccionales (Resend).
+- **Desde el admin:** arrastra imágenes al formulario del producto (JPG, PNG, WebP, GIF, AVIF; máx. 5 MB).
+  Se validan por su contenido real y se guardan en `storage/uploads/` (fuera de git), servidas en `/uploads/…`.
+- **Por URL:** debe ser la dirección de la **imagen** (`…/foto.jpg`), no la página del producto; el admin lo verifica al guardar.
+- **Producción en serverless (Vercel):** el disco es efímero; reemplaza `saveUpload` en `src/lib/storage.ts`
+  por Cloudinary / S3 / UploadThing.
+- Las imágenes del catálogo de ejemplo son ilustraciones SVG propias en `public/products/`
+  (`node scripts/generate-product-images.mjs`).
+
+## 7. Correos transaccionales
+
+| Evento | Correo |
+|---|---|
+| Registro | Bienvenida |
+| Compra | Confirmación del pedido (o aviso de pago pendiente) |
+| Cambio de estado (admin) | En preparación · Enviado (con transportadora y guía) · Entregado · Cancelado · Reembolsado |
+| Cambio de contraseña | Aviso de seguridad |
+
+Sin `SMTP_HOST` en `.env`, **no se envía nada**: cada correo se guarda como HTML en `storage/emails/`
+para abrirlo en el navegador. Para enviar de verdad, configura `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`,
+`SMTP_PASS` y `MAIL_FROM` (Gmail con contraseña de aplicación, Brevo, Resend, Amazon SES…).
+Los correos se envían con `after()` de Next.js, sin hacer esperar al cliente.
+
+## 8. Administración de usuarios y seguridad
+
+- **/cuenta/seguridad:** cualquier usuario cambia su contraseña (8+ caracteres con letras y números).
+- **/admin/usuarios:** crear clientes o administradores, otorgar/quitar el rol de admin y asignar contraseñas.
+  No puedes quitarte el rol a ti mismo ni dejar la tienda sin administradores.
+- El rol de admin se verifica contra la base de datos en cada acción: quitarlo surte efecto de inmediato.
+- **/admin/categorias:** crear, editar y eliminar categorías y subcategorías (2 niveles). Una categoría con
+  productos no se puede eliminar; filtrar por una categoría principal incluye sus subcategorías.
+
+## 9. Próximos pasos sugeridos
+
+- Pasarela de pago real con webhooks (Wompi / Stripe).
+- Recuperación de contraseña por correo ("¿Olvidaste tu contraseña?").
 - Cálculo de envío por ciudad e IVA.
-- Tests (Vitest + Playwright).
+- Tests automatizados (Vitest + Playwright) en CI.

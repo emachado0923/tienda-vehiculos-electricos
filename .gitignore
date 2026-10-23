@@ -9,3 +9,6 @@ next-env.d.ts
 .env*.local
 .DS_Store
 npm-debug.log*
+
+# Archivos subidos y vistas previas de correos (desarrollo)
+storage/

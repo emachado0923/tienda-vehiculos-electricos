@@ -5,6 +5,7 @@ import { startTransition, useActionState, useState } from "react";
 import type { CategoryKind, ConnectorType, InverterType, PanelType } from "@prisma/client";
 import { saveProductAction } from "@/actions/product.actions";
 import { FieldError, FormField } from "@/components/ui/form-field";
+import { ImageUploader } from "@/components/admin/image-uploader";
 import { CONNECTOR_LABELS, INVERTER_LABELS, PANEL_LABELS } from "@/lib/constants";
 import type { ActionState } from "@/types";
 
@@ -49,14 +50,12 @@ export function ProductForm({ categories, initial }: Props) {
   const errors = state.fieldErrors ?? {};
 
   const [categoryId, setCategoryId] = useState(initial?.categoryId ?? "");
-  const [images, setImages] = useState((initial?.images ?? []).join("\n"));
   const [specs, setSpecs] = useState<SpecRow[]>(() => {
     const rows = Object.entries(initial?.specs ?? {}).map(([key, value]) => ({ key, value }));
     return rows.length ? rows : [{ key: "", value: "" }];
   });
 
   const kind = categories.find((c) => c.id === categoryId)?.kind;
-  const imageUrls = images.split(/\r?\n/).map((s) => s.trim()).filter(Boolean);
 
   /**
    * Enviamos manualmente (preventDefault) para que React 19 NO resetee los
@@ -94,28 +93,7 @@ export function ProductForm({ categories, initial }: Props) {
         </Section>
 
         <Section title="Imágenes">
-          <div>
-            <label htmlFor="images" className="label">URLs de imágenes (una por línea, la primera es la principal)</label>
-            <textarea
-              id="images"
-              name="images"
-              rows={4}
-              value={images}
-              onChange={(e) => setImages(e.target.value)}
-              placeholder="https://cdn.ejemplo.com/cargador-tipo2.jpg"
-              className="input font-mono text-xs"
-            />
-            <FieldError errors={errors.images} />
-          </div>
-          {imageUrls.length > 0 && (
-            <div className="flex flex-wrap gap-2">
-              {imageUrls.map((url, i) => (
-                // Vista previa simple; <img> evita configurar dominios para URLs aún no guardadas
-                // eslint-disable-next-line @next/next/no-img-element
-                <img key={`${url}-${i}`} src={url} alt="" className="h-20 w-20 rounded-lg border border-slate-200 object-cover" />
-              ))}
-            </div>
-          )}
+          <ImageUploader name="images" defaultValue={initial?.images} error={errors.images?.[0]} />
         </Section>
 
         <Section title="Especificaciones técnicas">

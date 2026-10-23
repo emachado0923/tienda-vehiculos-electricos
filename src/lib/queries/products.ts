@@ -74,7 +74,10 @@ function buildWhere(f: ProductFilters): Prisma.ProductWhereInput {
       ],
     });
   }
-  if (f.category) and.push({ category: { slug: f.category } });
+  // Una categoría principal incluye los productos de sus subcategorías
+  if (f.category) {
+    and.push({ category: { OR: [{ slug: f.category }, { parent: { slug: f.category } }] } });
+  }
   if (f.kind) and.push({ category: { kind: f.kind } });
   if (f.connector?.length) and.push({ connectorType: { in: f.connector } });
   if (f.panel?.length) and.push({ panelType: { in: f.panel } });

@@ -1,7 +1,12 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { after } from "next/server";
+import bcrypt from "bcryptjs";
 import { z } from "zod";
+import { changePasswordSchema } from "@/lib/validations/auth";
+import { sendEmail } from "@/lib/email/mailer";
+import { passwordChangedEmail } from "@/lib/email/templates";
 import { prisma } from "@/lib/prisma";
 import { requireUser } from "@/lib/auth-guards";
 import { addressSchema } from "@/lib/validations/checkout";
@@ -27,6 +32,28 @@ export async function addAddressAction(_prev: ActionState, formData: FormData): 
 
   revalidatePath("/cuenta/direcciones");
   return { ok: true, message: "Dirección guardada." };
+}
+
+/** Cualquier usuario: cambia su propia contraseña (requiere la actual). */
+export async function changePasswordAction(_prev: ActionState, formData: FormData): Promise<ActionState> {
+  const sessionUser = await requireUser();
+  const parsed = changePasswordSchema.safeParse(Object.fromEntries(formData));
+  if (!parsed.success) {
+    return { ok: false, fieldErrors: z.flattenError(parsed.error).fieldErrors };
+  }
+
+  const user = await prisma.user.findUnique({ where: { id: sessionUser.id } });
+  if (!user || !(await bcrypt.compare(parsed.data.currentPassword, user.passwordHash))) {
+    return { ok: false, fieldErrors: { currentPassword: ["La contraseña actual no es correcta."] } };
+  }
+
+  await prisma.user.update({
+    where: { id: user.id },
+    data: { passwordHash: await bcrypt.hash(parsed.data.newPassword, 12) },
+  });
+  after(() => sendEmail(passwordChangedEmail(user.email, user.name)));
+
+  return { ok: true, message: "Contraseña actualizada correctamente." };
 }
 
 /** Cliente: elimina una dirección propia. */
