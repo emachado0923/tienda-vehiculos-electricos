@@ -118,6 +118,8 @@ npm install
 > $env:NODE_OPTIONS="--use-system-ca"
 > npm install
 > ```
+> `npm run dev` ya incluye `--use-system-ca` (vía `cross-env`), para que el
+> optimizador de imágenes de Next.js pueda descargar imágenes remotas detrás del proxy.
 
 ### 3.3 Base de datos MySQL
 
@@ -190,7 +192,9 @@ El estado definitivo del pago debe confirmarse por **webhook**, no por la respue
 
 ## 6. Próximos pasos sugeridos
 
-- Subida de imágenes a S3 / Cloudinary / UploadThing (hoy se registran por URL).
+- Subida de imágenes a S3 / Cloudinary / UploadThing (hoy se registran por URL `https://…` o ruta local `/…` en `public/`).
+  Las imágenes del catálogo de ejemplo son ilustraciones SVG propias en `public/products/`,
+  generadas con `node scripts/generate-product-images.mjs`.
 - Webhooks de pago reales y correos transaccionales (Resend).
 - Cálculo de envío por ciudad e IVA.
 - Tests (Vitest + Playwright).

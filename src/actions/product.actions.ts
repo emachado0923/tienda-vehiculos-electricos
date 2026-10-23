@@ -7,6 +7,7 @@ import { prisma } from "@/lib/prisma";
 import { requireAdmin } from "@/lib/auth-guards";
 import { productFormDataToObject, productSchema } from "@/lib/validations/product";
 import { createProduct, productErrorMessage, updateProduct } from "@/lib/services/products";
+import { findInvalidImageUrl } from "@/lib/services/image-check";
 import type { ActionState } from "@/types";
 
 /** Invalida las páginas que muestran productos. */
@@ -34,6 +35,11 @@ export async function saveProductAction(
       message: "Revisa los campos marcados.",
       fieldErrors: z.flattenError(parsed.error).fieldErrors,
     };
+  }
+
+  const imageError = await findInvalidImageUrl(parsed.data.images);
+  if (imageError) {
+    return { ok: false, message: imageError, fieldErrors: { images: [imageError] } };
   }
 
   const id = formData.get("id")?.toString();

@@ -31,7 +31,7 @@ export function ProductCard({ product }: { product: ProductCardDTO }) {
           </div>
         )}
         {discount && (
-          <span className="absolute top-3 left-3 rounded-full bg-rose-600 px-2 py-0.5 text-xs font-bold text-white">
+          <span className="absolute bottom-3 left-3 rounded-full bg-rose-600 px-2 py-0.5 text-xs font-bold text-white">
             -{discount}%
           </span>
         )}
