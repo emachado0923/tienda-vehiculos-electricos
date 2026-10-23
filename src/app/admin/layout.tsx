@@ -12,7 +12,9 @@ export const metadata: Metadata = { title: { default: "Admin", template: "%s | A
 const NAV = [
   { href: "/admin", label: "Resumen", icon: "📊" },
   { href: "/admin/productos", label: "Productos", icon: "📦" },
+  { href: "/admin/categorias", label: "Categorías", icon: "🗂️" },
   { href: "/admin/pedidos", label: "Pedidos", icon: "🧾" },
+  { href: "/admin/usuarios", label: "Usuarios", icon: "👥" },
   { href: "/admin/configuracion", label: "Configuración", icon: "⚙️" },
 ];
 
@@ -38,6 +40,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
           <p className="truncate">{admin.email}</p>
           <div className="mt-2 flex gap-3">
             <Link href="/" className="hover:text-white">Ver tienda</Link>
+            <Link href="/cuenta/seguridad" className="hover:text-white">Contraseña</Link>
             <form action={logoutAction}><button className="hover:text-white">Salir</button></form>
           </div>
         </div>

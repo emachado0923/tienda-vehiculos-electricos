@@ -2,6 +2,9 @@
 
 import bcrypt from "bcryptjs";
 import { AuthError } from "next-auth";
+import { after } from "next/server";
+import { sendEmail } from "@/lib/email/mailer";
+import { welcomeEmail } from "@/lib/email/templates";
 import { z } from "zod";
 import { signIn, signOut } from "@/auth";
 import { prisma } from "@/lib/prisma";
@@ -48,6 +51,7 @@ export async function registerAction(_prev: ActionState, formData: FormData): Pr
   await prisma.user.create({
     data: { name, email, passwordHash: await bcrypt.hash(password, 12) },
   });
+  after(() => sendEmail(welcomeEmail(email, name)));
 
   // Inicia sesión automáticamente tras el registro
   await signIn("credentials", { email, password, redirectTo: "/cuenta" });

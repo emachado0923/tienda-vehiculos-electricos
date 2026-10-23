@@ -1,6 +1,9 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { after } from "next/server";
+import { sendEmail } from "@/lib/email/mailer";
+import { NOTIFIABLE_STATUSES, orderConfirmationEmail, orderStatusEmail } from "@/lib/email/templates";
 import { OrderStatus, PaymentStatus, Prisma } from "@prisma/client";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
@@ -99,12 +102,19 @@ export async function placeOrderAction(input: CheckoutInput): Promise<PlaceOrder
     reference: order.id,
   });
 
-  await prisma.order.update({
+  const finalOrder = await prisma.order.update({
     where: { id: order.id },
     data: payment.approved
       ? { paymentStatus: PaymentStatus.APPROVED, status: OrderStatus.PAID, paymentRef: payment.transactionId }
       : { paymentStatus: PaymentStatus.DECLINED, paymentRef: payment.transactionId },
+    include: { items: true },
   });
+
+  // after(): el correo se envía DESPUÉS de responder, sin hacer esperar al cliente
+  if (user.email) {
+    const to = user.email;
+    after(() => sendEmail(orderConfirmationEmail(to, finalOrder)));
+  }
 
   revalidatePath("/cuenta");
   revalidatePath("/admin/pedidos");
@@ -126,7 +136,7 @@ export async function updateOrderStatusAction(formData: FormData) {
 
   const { orderId, status, carrier, trackingNumber } = parsed.data;
 
-  await prisma.$transaction(async (tx) => {
+  const { previousStatus, updated } = await prisma.$transaction(async (tx) => {
     const current = await tx.order.findUniqueOrThrow({
       where: { id: orderId },
       include: { items: true },
@@ -146,15 +156,23 @@ export async function updateOrderStatusAction(formData: FormData) {
       }
     }
 
-    await tx.order.update({
+    const updated = await tx.order.update({
       where: { id: orderId },
       data: {
         status,
         carrier: carrier || null,
         trackingNumber: trackingNumber || null,
       },
+      include: { user: { select: { email: true } } },
     });
+    return { previousStatus: current.status, updated };
   });
+
+  // Notifica al cliente solo si el estado cambió y es relevante para él
+  if (status !== previousStatus && NOTIFIABLE_STATUSES.includes(status)) {
+    const email = orderStatusEmail(updated.user.email, updated);
+    if (email) after(() => sendEmail(email));
+  }
 
   revalidatePath("/admin/pedidos");
   revalidatePath(`/admin/pedidos/${orderId}`);

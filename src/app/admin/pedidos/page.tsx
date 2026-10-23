@@ -8,14 +8,17 @@ import { formatDate, formatPrice } from "@/lib/utils";
 
 export const metadata: Metadata = { title: "Pedidos" };
 
-type PageProps = { searchParams: Promise<{ status?: string }> };
+type PageProps = { searchParams: Promise<{ status?: string; q?: string }> };
 
 export default async function AdminOrdersPage({ searchParams }: PageProps) {
-  const { status } = await searchParams;
+  const { status, q } = await searchParams;
   const filter = status && status in OrderStatus ? (status as OrderStatus) : undefined;
 
   const orders = await prisma.order.findMany({
-    where: filter ? { status: filter } : undefined,
+    where: {
+      ...(filter ? { status: filter } : {}),
+      ...(q ? { user: { OR: [{ email: { contains: q } }, { name: { contains: q } }] } } : {}),
+    },
     orderBy: { createdAt: "desc" },
     include: { user: { select: { name: true, email: true } } },
     take: 200,
@@ -23,7 +26,13 @@ export default async function AdminOrdersPage({ searchParams }: PageProps) {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-2xl font-bold">Pedidos</h1>
+      <div className="flex flex-wrap items-center justify-between gap-4">
+        <h1 className="text-2xl font-bold">Pedidos</h1>
+        <form>
+          {filter && <input type="hidden" name="status" value={filter} />}
+          <input name="q" defaultValue={q} placeholder="Buscar por cliente (nombre o correo)" className="input" />
+        </form>
+      </div>
 
       {/* Filtro por estado */}
       <div className="flex flex-wrap gap-2">
