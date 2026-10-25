@@ -43,8 +43,7 @@ async function main() {
   }
 
   // ---------- Productos ----------
-  // La imagen de cada producto es /products/<slug>.svg
-  // (generadas con: node scripts/generate-product-images.mjs)
+  // La imagen de cada producto es /products/<slug>.jpg (fotos reales, créditos en public/products/CREDITOS.md)
   type SeedProduct = Omit<Prisma.ProductCreateInput, "category" | "images"> & {
     slug: string;
     categorySlug: string;
@@ -160,7 +159,7 @@ async function main() {
       create: {
         ...p,
         category: { connect: { id: cat[categorySlug] } },
-        images: { create: [{ url: `/products/${p.slug}.svg`, alt: p.title, position: 0 }] },
+        images: { create: [{ url: `/products/${p.slug}.jpg`, alt: p.title, position: 0 }] },
       },
     });
   }
@@ -181,6 +180,7 @@ async function main() {
       address: "Bogotá, Colombia",
       instagramUrl: "https://instagram.com/",
       facebookUrl: "https://facebook.com/",
+      youtubeUrl: "https://youtube.com/",
       flatShippingFee: 25000,
       freeShippingThreshold: 1500000,
     },

@@ -199,8 +199,7 @@ El estado definitivo del pago debe confirmarse por **webhook**, no por la respue
 - **Por URL:** debe ser la dirección de la **imagen** (`…/foto.jpg`), no la página del producto; el admin lo verifica al guardar.
 - **Producción en serverless (Vercel):** el disco es efímero; reemplaza `saveUpload` en `src/lib/storage.ts`
   por Cloudinary / S3 / UploadThing.
-- Las imágenes del catálogo de ejemplo son ilustraciones SVG propias en `public/products/`
-  (`node scripts/generate-product-images.mjs`).
+- Las imágenes del catálogo de ejemplo son fotos reales de Wikimedia Commons en `public/products/` (atribución en `public/products/CREDITOS.md`); reemplázalas desde el admin con fotos propias.
 
 ## 7. Correos transaccionales
 
