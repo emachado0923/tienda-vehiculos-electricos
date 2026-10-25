@@ -12,3 +12,5 @@ npm-debug.log*
 
 # Archivos subidos y vistas previas de correos (desarrollo)
 storage/
+dev*.log
+plan-original/
