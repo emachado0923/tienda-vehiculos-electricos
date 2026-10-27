@@ -1,4 +1,4 @@
-# 🔋 E-Positive — E-commerce de movilidad eléctrica y energía renovable
+# ⚡ EMC Positive Energy — E-commerce de movilidad eléctrica y energía renovable
 
 Tienda online para **accesorios de vehículos eléctricos** (cargadores, adaptadores Tipo 1/Tipo 2/CCS2, cables, organizadores) y **energía solar** (paneles, inversores híbridos, controladores MPPT, baterías LiFePO4).
 
@@ -239,7 +239,7 @@ gcloud services enable run.googleapis.com cloudbuild.googleapis.com artifactregi
   sqladmin.googleapis.com secretmanager.googleapis.com storage.googleapis.com
 
 # Repositorio de imágenes
-gcloud artifacts repositories create epositive --repository-format=docker --location=$REGION
+gcloud artifacts repositories create emc-positive --repository-format=docker --location=$REGION
 
 # Base de datos Cloud SQL (MySQL 8)
 gcloud sql instances create tienda-mysql --database-version=MYSQL_8_0 --tier=db-f1-micro --region=$REGION
@@ -252,8 +252,8 @@ printf 'mysql://tienda:CLAVE_SEGURA@localhost/tienda_ev?socket=/cloudsql/%s:%s:t
 openssl rand -base64 32 | tr -d '\n' | gcloud secrets create AUTH_SECRET --data-file=-
 
 # Bucket público para imágenes subidas desde el admin
-gcloud storage buckets create gs://epositive-uploads --location=$REGION --uniform-bucket-level-access
-gcloud storage buckets add-iam-policy-binding gs://epositive-uploads --member=allUsers --role=roles/storage.objectViewer
+gcloud storage buckets create gs://emc-positive-uploads --location=$REGION --uniform-bucket-level-access
+gcloud storage buckets add-iam-policy-binding gs://emc-positive-uploads --member=allUsers --role=roles/storage.objectViewer
 
 # Permisos de la cuenta de servicio (por defecto Cloud Build y Cloud Run usan la de Compute Engine)
 SA="$(gcloud projects describe $PROJECT --format='value(projectNumber)')-compute@developer.gserviceaccount.com"
@@ -261,14 +261,14 @@ for ROLE in roles/run.admin roles/iam.serviceAccountUser roles/artifactregistry.
             roles/secretmanager.secretAccessor roles/cloudsql.client; do
   gcloud projects add-iam-policy-binding $PROJECT --member="serviceAccount:$SA" --role=$ROLE
 done
-gcloud storage buckets add-iam-policy-binding gs://epositive-uploads --member="serviceAccount:$SA" --role=roles/storage.objectAdmin
+gcloud storage buckets add-iam-policy-binding gs://emc-positive-uploads --member="serviceAccount:$SA" --role=roles/storage.objectAdmin
 ```
 
 ### 9.2 Desplegar
 
 ```bash
 gcloud builds submit --config cloudbuild.yaml \
-  --substitutions=_CLOUDSQL_INSTANCE=$PROJECT:$REGION:tienda-mysql,_GCS_BUCKET=epositive-uploads
+  --substitutions=_CLOUDSQL_INSTANCE=$PROJECT:$REGION:tienda-mysql,_GCS_BUCKET=emc-positive-uploads
 ```
 
 También puedes crear un **trigger** de Cloud Build conectado a GitHub (rama `main`) con esas mismas
@@ -277,10 +277,10 @@ sustituciones para desplegar en cada `git push`.
 **Primer despliegue — crear el administrador y los datos de ejemplo:**
 
 ```bash
-gcloud run services update tienda-epositive --region=$REGION \
+gcloud run services update tienda-emc-positive --region=$REGION \
   --update-env-vars=RUN_SEED=true,SEED_ADMIN_EMAIL=tu@correo.com,SEED_ADMIN_PASSWORD='OtraClaveSegura1'
 # Cuando el servicio arranque, quita las variables del seed:
-gcloud run services update tienda-epositive --region=$REGION --remove-env-vars=RUN_SEED,SEED_ADMIN_EMAIL,SEED_ADMIN_PASSWORD
+gcloud run services update tienda-emc-positive --region=$REGION --remove-env-vars=RUN_SEED,SEED_ADMIN_EMAIL,SEED_ADMIN_PASSWORD
 ```
 
 **Variables opcionales** (`gcloud run services update … --update-env-vars=…`): `APP_URL`
@@ -290,13 +290,13 @@ gcloud run services update tienda-epositive --region=$REGION --remove-env-vars=R
 ### 9.3 Probar la imagen localmente
 
 ```bash
-docker build -t epositive .
+docker build -t emc-positive .
 # Detrás de un proxy corporativo con inspección TLS, pasa sus certificados (no quedan en la imagen):
 #   node -e "require('fs').writeFileSync('ca.pem', require('tls').getCACertificates('system').join('\n'))"
-#   docker build --secret id=extra_ca,src=ca.pem -t epositive .
+#   docker build --secret id=extra_ca,src=ca.pem -t emc-positive .
 docker run -p 8080:8080 \
   -e DATABASE_URL="mysql://root:password@host.docker.internal:3306/tienda_ev" \
-  -e AUTH_SECRET="un-secreto-largo" -e AUTH_TRUST_HOST=true epositive
+  -e AUTH_SECRET="un-secreto-largo" -e AUTH_TRUST_HOST=true emc-positive
 ```
 
 ## 10. Próximos pasos sugeridos

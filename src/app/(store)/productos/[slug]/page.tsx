@@ -56,7 +56,7 @@ export default async function ProductPage({ params }: PageProps) {
               <Image src={product.images[0].url} alt={product.images[0].alt ?? product.title} fill priority sizes="(min-width:1024px) 50vw, 100vw" className="object-cover" />
             ) : (
               <div className="flex h-full items-center justify-center">
-                <LogoMark className="h-16 w-28 text-slate-300" />
+                <LogoMark className="h-16 w-16 text-slate-300" />
               </div>
             )}
           </div>

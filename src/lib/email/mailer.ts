@@ -35,7 +35,7 @@ function getTransporter() {
 }
 
 export async function sendEmail(message: EmailMessage): Promise<void> {
-  const from = process.env.MAIL_FROM ?? "E-Positive <no-reply@epositive.co>";
+  const from = process.env.MAIL_FROM ?? "EMC Positive Energy <no-reply@emc-positive.com>";
   try {
     const smtp = getTransporter();
     if (smtp) {

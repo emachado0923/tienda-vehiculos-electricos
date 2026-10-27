@@ -27,7 +27,7 @@ export function ProductCard({ product }: { product: ProductCardDTO }) {
           />
         ) : (
           <div className="flex h-full items-center justify-center">
-            <LogoMark className="h-12 w-20 text-slate-300" />
+            <LogoMark className="h-12 w-12 text-slate-300" />
           </div>
         )}
         {discount && (

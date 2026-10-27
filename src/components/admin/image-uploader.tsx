@@ -143,7 +143,7 @@ export function ImageUploader({ name, defaultValue = [], error, max = 10 }: Prop
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img src={url} alt="" className="aspect-square w-full object-cover" />
               {i === 0 && (
-                <span className="absolute top-2 left-2 rounded-full bg-brand-500 px-2 py-0.5 text-xs font-bold text-ink">Principal</span>
+                <span className="absolute top-2 left-2 rounded-full bg-brand-500 px-2 py-0.5 text-xs font-bold text-white">Principal</span>
               )}
               <div className="absolute inset-x-0 bottom-0 flex justify-between gap-1 bg-ink/75 p-1.5 text-xs text-white opacity-100 sm:opacity-0 sm:transition sm:group-hover:opacity-100">
                 <div className="flex gap-1">

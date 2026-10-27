@@ -3,7 +3,7 @@
 #
 #  Ejecución manual:
 #    gcloud builds submit --config cloudbuild.yaml \
-#      --substitutions=_CLOUDSQL_INSTANCE=PROYECTO:us-central1:tienda-mysql,_GCS_BUCKET=epositive-uploads
+#      --substitutions=_CLOUDSQL_INSTANCE=PROYECTO:us-central1:tienda-mysql,_GCS_BUCKET=emc-positive-uploads
 #
 #  Requisitos previos (una sola vez): ver README → "Despliegue en Google Cloud Run".
 #  Secretos en Secret Manager: DATABASE_URL y AUTH_SECRET.
@@ -11,13 +11,13 @@
 
 substitutions:
   _REGION: us-central1
-  _REPOSITORY_NAME: epositive          # repositorio Docker en Artifact Registry
+  _REPOSITORY_NAME: emc-positive          # repositorio Docker en Artifact Registry
   _IMAGE_NAME: tienda
-  _SERVICE_NAME: tienda-epositive      # servicio de Cloud Run
+  _SERVICE_NAME: tienda-emc-positive      # servicio de Cloud Run
   _PORT: "8080"
   _CLOUDSQL_INSTANCE: ""               # PROYECTO:REGION:INSTANCIA (vacío = sin Cloud SQL)
   _GCS_BUCKET: ""                      # bucket para imágenes subidas (vacío = disco efímero)
-  _APP_URL: ""                         # URL pública (enlaces en correos), ej. https://tienda.epositive.co
+  _APP_URL: ""                         # URL pública (enlaces en correos), ej. https://emc-positive.com
 
 options:
   logging: CLOUD_LOGGING_ONLY          # requerido al usar cuentas de servicio personalizadas
