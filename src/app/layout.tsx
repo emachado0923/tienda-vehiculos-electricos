@@ -4,8 +4,8 @@ import "./globals.css";
 
 export const metadata: Metadata = {
   title: {
-    default: "E-Positive — Accesorios para vehículos eléctricos y energía solar",
-    template: "%s | E-Positive",
+    default: "EMC Positive Energy — Accesorios para vehículos eléctricos y energía solar",
+    template: "%s | EMC Positive Energy",
   },
   description:
     "Cargadores, adaptadores Tipo 1/Tipo 2/CCS2, cables de carga, paneles solares, inversores híbridos y baterías LiFePO4.",

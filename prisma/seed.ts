@@ -170,11 +170,11 @@ async function main() {
     update: {},
     create: {
       id: 1,
-      storeName: "E-Positive",
+      storeName: "EMC Positive Energy",
       heroTitle: "Carga tu futuro eléctrico",
       heroSubtitle: "Cargadores, adaptadores y soluciones solares con envío a toda Colombia.",
       heroImageUrl: img("photo-1593941707874-ef25b8b4a92b"),
-      contactEmail: "ventas@epositive.co",
+      contactEmail: "ventas@emc-positive.com",
       contactPhone: "+57 601 000 0000",
       whatsapp: "+57 300 000 0000",
       address: "Bogotá, Colombia",

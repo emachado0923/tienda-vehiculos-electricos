@@ -1,6 +1,6 @@
 # syntax=docker/dockerfile:1
 # =============================================================
-#  Imagen de producción de E-Positive (Next.js standalone)
+#  Imagen de producción de EMC Positive Energy (Next.js standalone)
 #  Pensada para Google Cloud Run (escucha en $PORT, por defecto 8080)
 # =============================================================
 
@@ -20,7 +20,7 @@ COPY prisma ./prisma
 # Secreto OPCIONAL "extra_ca": certificados raíz extra para builds locales detrás
 # de un proxy corporativo con inspección TLS. No queda guardado en la imagen.
 # En Cloud Build no se usa. Ejemplo local:
-#   docker build --secret id=extra_ca,src=corp-ca.pem -t epositive .
+#   docker build --secret id=extra_ca,src=corp-ca.pem -t emc-positive .
 RUN --mount=type=secret,id=extra_ca,required=false \
     if [ -f /run/secrets/extra_ca ]; then export NODE_EXTRA_CA_CERTS=/run/secrets/extra_ca; fi \
  && npm ci

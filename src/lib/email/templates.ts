@@ -18,18 +18,18 @@ const esc = (s: string) =>
 function layout(title: string, body: string) {
   return `<!doctype html>
 <html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width"><title>${esc(title)}</title></head>
-<body style="margin:0;background:#f4f1ec;font-family:Segoe UI,Arial,sans-serif;color:#151b26">
+<body style="margin:0;background:#f4f1ec;font-family:Segoe UI,Arial,sans-serif;color:#1b1f3b">
   <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f4f1ec;padding:24px 12px">
     <tr><td align="center">
       <table role="presentation" width="600" cellpadding="0" cellspacing="0" style="max-width:600px;width:100%;background:#ffffff;border-radius:12px;overflow:hidden">
-        <tr><td style="background:#171c26;padding:20px 28px">
-          <span style="display:inline-block;background:#f5a524;color:#151b26;font-weight:800;border-radius:6px;padding:2px 8px;margin-right:8px">E+</span>
-          <span style="color:#ffffff;font-weight:800;letter-spacing:3px;font-size:18px">E-POSITIVE</span>
+        <tr><td style="background:#1b1f3b;padding:20px 28px">
+          <span style="color:#ffffff;font-weight:900;letter-spacing:1px;font-size:24px">EMC</span>
+          <span style="color:#cbd5e1;font-weight:500;letter-spacing:4px;font-size:11px;margin-left:8px">POSITIVE ENERGY</span>
         </td></tr>
         <tr><td style="padding:28px">${body}</td></tr>
         <tr><td style="padding:18px 28px;background:#faf8f5;color:#64748b;font-size:12px">
-          Carga · Accesorios · Energía limpia — <a href="${APP_URL()}" style="color:#a3620a">${APP_URL().replace(/^https?:\/\//, "")}</a><br>
-          Recibes este correo por una acción en tu cuenta de E-Positive.
+          Accesorios para vehículos eléctricos — <a href="${APP_URL()}" style="color:#bb3512">${APP_URL().replace(/^https?:\/\//, "")}</a><br>
+          Recibes este correo por una acción en tu cuenta de EMC Positive Energy.
         </td></tr>
       </table>
     </td></tr>
@@ -38,7 +38,7 @@ function layout(title: string, body: string) {
 }
 
 const button = (href: string, label: string) =>
-  `<a href="${href}" style="display:inline-block;background:#f5a524;color:#151b26;font-weight:700;text-decoration:none;padding:12px 22px;border-radius:8px">${esc(label)}</a>`;
+  `<a href="${href}" style="display:inline-block;background:#f4572b;color:#ffffff;font-weight:700;text-decoration:none;padding:12px 22px;border-radius:8px">${esc(label)}</a>`;
 
 type ShippingAddress = { fullName: string; line1: string; line2?: string; city: string; state: string; phone: string };
 type OrderWithItems = Order & { items: OrderItem[] };
@@ -48,8 +48,8 @@ type OrderWithItems = Order & { items: OrderItem[] };
 export function welcomeEmail(to: string, name: string): EmailMessage {
   return {
     to,
-    subject: "¡Bienvenido a E-Positive!",
-    text: `Hola ${name}, tu cuenta en E-Positive está lista. Explora el catálogo en ${APP_URL()}/productos`,
+    subject: "¡Bienvenido a EMC Positive Energy!",
+    text: `Hola ${name}, tu cuenta en EMC Positive Energy está lista. Explora el catálogo en ${APP_URL()}/productos`,
     html: layout(
       "Bienvenido",
       `<h1 style="margin:0 0 12px;font-size:22px">¡Hola, ${esc(name)}! ⚡</h1>
@@ -63,7 +63,7 @@ export function passwordChangedEmail(to: string, name: string | null): EmailMess
   return {
     to,
     subject: "Tu contraseña fue cambiada",
-    text: `Hola ${name ?? ""}, la contraseña de tu cuenta E-Positive fue cambiada. Si no fuiste tú, contáctanos de inmediato.`,
+    text: `Hola ${name ?? ""}, la contraseña de tu cuenta EMC Positive Energy fue cambiada. Si no fuiste tú, contáctanos de inmediato.`,
     html: layout(
       "Contraseña cambiada",
       `<h1 style="margin:0 0 12px;font-size:22px">Tu contraseña fue cambiada</h1>
@@ -110,7 +110,7 @@ export function orderConfirmationEmail(to: string, order: OrderWithItems): Email
 const STATUS_COPY: Partial<Record<OrderStatus, { title: string; body: string }>> = {
   PROCESSING: { title: "Estamos preparando tu pedido", body: "Tu pedido está en bodega y pronto será despachado." },
   SHIPPED: { title: "¡Tu pedido va en camino! 🚚", body: "Entregamos tu pedido a la transportadora." },
-  DELIVERED: { title: "Tu pedido fue entregado ✅", body: "Esperamos que disfrutes tu compra. ¡Gracias por confiar en E-Positive!" },
+  DELIVERED: { title: "Tu pedido fue entregado ✅", body: "Esperamos que disfrutes tu compra. ¡Gracias por confiar en EMC Positive Energy!" },
   CANCELLED: { title: "Tu pedido fue cancelado", body: "Tu pedido fue cancelado. Si tienes dudas o se realizó un cobro, contáctanos." },
   REFUNDED: { title: "Procesamos tu reembolso", body: "El reembolso fue emitido; puede tardar algunos días hábiles en reflejarse." },
 };

@@ -7,7 +7,7 @@ import { LogoMark } from "@/components/brand/logo";
 // Datos en vivo (stock, precios, sesión): renderizar siempre en cada petición
 export const dynamic = "force-dynamic";
 
-export const metadata: Metadata = { title: { default: "Admin", template: "%s | Admin E-Positive" } };
+export const metadata: Metadata = { title: { default: "Admin", template: "%s | Admin EMC Positive Energy" } };
 
 const NAV = [
   { href: "/admin", label: "Resumen", icon: "📊" },
