@@ -6,7 +6,8 @@
 #      --substitutions=_CLOUDSQL_INSTANCE=PROYECTO:us-central1:tienda-mysql,_GCS_BUCKET=emc-positive-uploads
 #
 #  Requisitos previos (una sola vez): ver README → "Despliegue en Google Cloud Run".
-#  Secretos en Secret Manager: DATABASE_URL y AUTH_SECRET.
+#  Secretos en Secret Manager: DATABASE_URL y AUTH_SECRET
+#  (+ WOMPI_PUBLIC_KEY, WOMPI_INTEGRITY_SECRET, WOMPI_EVENTS_SECRET y CRON_SECRET si _ENABLE_WOMPI=true).
 # =============================================================
 
 substitutions:
@@ -18,6 +19,7 @@ substitutions:
   _CLOUDSQL_INSTANCE: ""               # PROYECTO:REGION:INSTANCIA (vacío = sin Cloud SQL)
   _GCS_BUCKET: ""                      # bucket para imágenes subidas (vacío = disco efímero)
   _APP_URL: ""                         # URL pública (enlaces en correos), ej. https://emc-positive.com
+  _ENABLE_WOMPI: "false"               # "true" = montar WOMPI_* y CRON_SECRET desde Secret Manager
 
 options:
   logging: CLOUD_LOGGING_ONLY          # requerido al usar cuentas de servicio personalizadas
@@ -27,6 +29,7 @@ steps:
   # 1. Construir la imagen (etiquetas: ID del build y latest)
   - id: build
     name: gcr.io/cloud-builders/docker
+    env: ["DOCKER_BUILDKIT=1"]   # el Dockerfile usa --mount (requiere BuildKit)
     args:
       - build
       - -t
@@ -52,13 +55,17 @@ steps:
         ENV_VARS="AUTH_TRUST_HOST=true"
         if [ -n "${_GCS_BUCKET}" ]; then ENV_VARS="$${ENV_VARS},GCS_BUCKET=${_GCS_BUCKET}"; fi
         if [ -n "${_APP_URL}" ]; then ENV_VARS="$${ENV_VARS},APP_URL=${_APP_URL}"; fi
+        SECRETS="DATABASE_URL=DATABASE_URL:latest,AUTH_SECRET=AUTH_SECRET:latest"
+        if [ "${_ENABLE_WOMPI}" = "true" ]; then
+          SECRETS="$${SECRETS},WOMPI_PUBLIC_KEY=WOMPI_PUBLIC_KEY:latest,WOMPI_INTEGRITY_SECRET=WOMPI_INTEGRITY_SECRET:latest,WOMPI_EVENTS_SECRET=WOMPI_EVENTS_SECRET:latest,CRON_SECRET=CRON_SECRET:latest"
+        fi
         FLAGS=(
           --image=${_REGION}-docker.pkg.dev/$PROJECT_ID/${_REPOSITORY_NAME}/${_IMAGE_NAME}:$BUILD_ID
           --region=${_REGION}
           --port=${_PORT}
           --allow-unauthenticated
           --memory=1Gi
-          --update-secrets=DATABASE_URL=DATABASE_URL:latest,AUTH_SECRET=AUTH_SECRET:latest
+          --update-secrets=$${SECRETS}
           --update-env-vars=$${ENV_VARS}
         )
         if [ -n "${_CLOUDSQL_INSTANCE}" ]; then FLAGS+=(--add-cloudsql-instances=${_CLOUDSQL_INSTANCE}); fi

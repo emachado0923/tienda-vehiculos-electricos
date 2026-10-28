@@ -13,13 +13,15 @@ type SavedAddress = Omit<Address, "createdAt" | "userId">;
 type Props = {
   savedAddresses: SavedAddress[];
   shipping: { flatFee: number; freeThreshold: number | null };
+  /** "wompi" = pago real en checkout alojado; "mock" = demostración */
+  gateway: "wompi" | "mock";
 };
 
 const EMPTY_ADDRESS = {
   fullName: "", phone: "", line1: "", line2: "", city: "", state: "", postalCode: "", country: "CO",
 };
 
-export function CheckoutForm({ savedAddresses, shipping }: Props) {
+export function CheckoutForm({ savedAddresses, shipping, gateway }: Props) {
   const router = useRouter();
   const { items, subtotal, clear, ready } = useCart();
   const [isPending, startTransition] = useTransition();
@@ -64,6 +66,10 @@ export function CheckoutForm({ savedAddresses, shipping }: Props) {
         return;
       }
       clear();
+      if (result.redirectUrl) {
+        window.location.assign(result.redirectUrl); // checkout de Wompi
+        return;
+      }
       router.push(`/checkout/exito?pedido=${result.orderNumber}`);
     });
   }
@@ -124,10 +130,17 @@ export function CheckoutForm({ savedAddresses, shipping }: Props) {
         {/* 2. Pago (simulado) */}
         <section className="card p-6">
           <h2 className="mb-1 text-lg font-semibold">2. Método de pago</h2>
-          <p className="mb-4 text-xs text-amber-700">
-            Modo demostración: no se realiza ningún cobro real.
-          </p>
-          <div className="grid gap-3 sm:grid-cols-2">
+          {gateway === "wompi" ? (
+            <p className="text-sm text-slate-600">
+              Al continuar te llevaremos al pago seguro de Wompi, donde podrás pagar con tarjeta de
+              crédito/débito, PSE o Nequi. No almacenamos datos de tu tarjeta.
+            </p>
+          ) : (
+            <p className="mb-4 text-xs text-amber-700">
+              Modo demostración: no se realiza ningún cobro real.
+            </p>
+          )}
+          <div className={gateway === "wompi" ? "hidden" : "grid gap-3 sm:grid-cols-2"}>
             {(Object.keys(PAYMENT_METHOD_LABELS) as PaymentMethod[]).map((m) => (
               <label key={m} className="flex cursor-pointer items-center gap-3 rounded-lg border border-slate-200 p-3 has-checked:border-brand-500 has-checked:bg-brand-50">
                 <input type="radio" name="payment" checked={paymentMethod === m} onChange={() => setPaymentMethod(m)} className="accent-brand-600" />
@@ -135,14 +148,14 @@ export function CheckoutForm({ savedAddresses, shipping }: Props) {
               </label>
             ))}
           </div>
-          {paymentMethod === "CARD" && (
+          {gateway === "mock" && paymentMethod === "CARD" && (
             <div className="mt-4 grid gap-3 sm:grid-cols-3">
               <input className="input sm:col-span-3" placeholder="4242 4242 4242 4242" inputMode="numeric" aria-label="Número de tarjeta (demo)" />
               <input className="input" placeholder="MM/AA" aria-label="Vencimiento (demo)" />
               <input className="input" placeholder="CVC" aria-label="CVC (demo)" />
             </div>
           )}
-          {paymentMethod === "PSE" && (
+          {gateway === "mock" && paymentMethod === "PSE" && (
             <select className="input mt-4" aria-label="Banco (demo)" defaultValue="">
               <option value="" disabled>Selecciona tu banco</option>
               <option>Bancolombia</option><option>Banco de Bogotá</option><option>Davivienda</option><option>BBVA</option><option>Nequi</option>
@@ -169,7 +182,7 @@ export function CheckoutForm({ savedAddresses, shipping }: Props) {
         </div>
         {error && <p className="rounded-lg bg-rose-50 p-3 text-sm text-rose-700" role="alert">{error}</p>}
         <button type="submit" disabled={isPending || !ready} className="btn-primary w-full">
-          {isPending ? "Procesando pago…" : "Pagar ahora"}
+          {isPending ? "Procesando…" : gateway === "wompi" ? "Continuar al pago" : "Pagar ahora"}
         </button>
       </aside>
     </form>
