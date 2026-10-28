@@ -184,13 +184,24 @@ curl "http://localhost:3000/api/products?connector=TYPE2,CCS2&power=7.4-22&sort=
 
 ## 5. Pagos
 
-`src/lib/payments/mock-gateway.ts` simula la pasarela (los montos terminados en `13` se rechazan, para probar el flujo de error). Para producción, reemplázalo por:
+### Wompi (tarjeta, PSE, Nequi)
 
-- **Tarjetas / Stripe:** Stripe Checkout o PaymentIntents + webhook.
-- **PSE (Colombia):** Wompi, ePayco o PayU (redirección al banco + webhook).
-- **PayPal:** Orders API v2.
+Con `WOMPI_PUBLIC_KEY` y `WOMPI_INTEGRITY_SECRET` definidos, el checkout redirige al Web Checkout de
+Wompi (`src/lib/payments/wompi.ts`); el estado del pago se confirma por **webhook**
+(`/api/webhooks/wompi`, validado con `WOMPI_EVENTS_SECRET`) y, como respaldo, consultando a Wompi
+al volver a la tienda. Sin llaves se usa `src/lib/payments/mock-gateway.ts` (modo demostración;
+los montos terminados en `13` se rechazan).
 
-El estado definitivo del pago debe confirmarse por **webhook**, no por la respuesta síncrona.
+- **Sandbox:** llaves `pub_test_…`. Wompi rechaza (403) `redirect-url` a localhost, por eso en local se omite
+  y el pedido se confirma al abrirlo en `/cuenta`. Tarjeta de prueba: `4242 4242 4242 4242`.
+- **Producción:** llaves `pub_prod_…` (las entrega Wompi al activar la cuenta) y registrar
+  `https://<tu-dominio>/api/webhooks/wompi` en Wompi → Desarrolladores → URL de eventos.
+
+### Pedidos abandonados
+
+Un pedido sin pagar retiene su stock `ORDER_HOLD_HOURS` (2 h, `src/lib/services/orders.ts`). El endpoint
+`POST /api/cron/expire-orders` (header `Authorization: Bearer $CRON_SECRET`) verifica el pago con Wompi,
+cancela los que siguen sin pagar y devuelve el stock. Prográmalo cada 30 min con Cloud Scheduler (ver §9.2).
 
 ## 6. Imágenes de productos
 
@@ -283,6 +294,22 @@ gcloud run services update tienda-emc-positive --region=$REGION \
 gcloud run services update tienda-emc-positive --region=$REGION --remove-env-vars=RUN_SEED,SEED_ADMIN_EMAIL,SEED_ADMIN_PASSWORD
 ```
 
+**Wompi y pedidos abandonados** (una vez, con las llaves reales o de sandbox):
+
+```bash
+for NAME in WOMPI_PUBLIC_KEY WOMPI_INTEGRITY_SECRET WOMPI_EVENTS_SECRET; do
+  read -rsp "$NAME: " VAL; echo
+  printf %s "$VAL" | gcloud secrets create $NAME --data-file=-
+done
+CRON=$(openssl rand -base64 32 | tr -d '
+'); printf %s "$CRON" | gcloud secrets create CRON_SECRET --data-file=-
+# (la cuenta de servicio necesita roles/secretmanager.secretAccessor, igual que para AUTH_SECRET)
+
+# Desplegar montando esos secretos: añade _ENABLE_WOMPI=true a --substitutions
+URL=$(gcloud run services describe tienda-emc-positive --region=$REGION --format='value(status.url)')
+gcloud scheduler jobs create http expire-orders --location=$REGION --schedule="*/30 * * * *"   --uri="$URL/api/cron/expire-orders" --http-method=POST --headers="Authorization=Bearer $CRON"
+```
+
 **Variables opcionales** (`gcloud run services update … --update-env-vars=…`): `APP_URL`
 (sustitución `_APP_URL`), `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `MAIL_FROM` y `SMTP_PASS`
 (mejor como secreto con `--update-secrets=SMTP_PASS=SMTP_PASS:latest`).
@@ -301,7 +328,7 @@ docker run -p 8080:8080 \
 
 ## 10. Próximos pasos sugeridos
 
-- Pasarela de pago real con webhooks (Wompi / Stripe).
+- Reembolsos desde el admin (API de Wompi) y más métodos de pago (Stripe / PayPal).
 - Recuperación de contraseña por correo ("¿Olvidaste tu contraseña?").
 - Cálculo de envío por ciudad e IVA.
 - Tests automatizados (Vitest + Playwright) en CI.

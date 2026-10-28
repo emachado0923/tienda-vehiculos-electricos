@@ -11,9 +11,10 @@ import { requireAdmin, requireUser } from "@/lib/auth-guards";
 import { getSiteConfig } from "@/lib/queries/site-config";
 import { checkoutSchema, type CheckoutInput } from "@/lib/validations/checkout";
 import { processMockPayment } from "@/lib/payments/mock-gateway";
+import { buildCheckoutUrl, isWompiEnabled } from "@/lib/payments/wompi";
 
 type PlaceOrderResult =
-  | { ok: true; orderId: string; orderNumber: number }
+  | { ok: true; orderId: string; orderNumber: number; redirectUrl?: string }
   | { ok: false; message: string };
 
 class CheckoutError extends Error {}
@@ -22,7 +23,8 @@ class CheckoutError extends Error {}
  * Crea un pedido a partir del carrito del cliente.
  *  1. Valida el input (nunca confiamos en precios enviados por el cliente).
  *  2. En una transacción: relee precios/stock de BD, descuenta stock y crea el pedido.
- *  3. Procesa el pago (mock) y actualiza el estado.
+ *  3. Con Wompi configurado, devuelve la URL de pago (el estado lo confirma el webhook);
+ *     si no, procesa el pago simulado y actualiza el estado.
  */
 export async function placeOrderAction(input: CheckoutInput): Promise<PlaceOrderResult> {
   const user = await requireUser();
@@ -95,7 +97,21 @@ export async function placeOrderAction(input: CheckoutInput): Promise<PlaceOrder
     return { ok: false, message: "No se pudo crear el pedido. Intenta de nuevo." };
   }
 
-  // Pago simulado (reemplazar por Stripe / PayPal / Wompi-PSE en producción)
+  // Pasarela real: el cliente paga en Wompi y el webhook marca el pedido como pagado
+  if (isWompiEnabled()) {
+    const appUrl = process.env.APP_URL ?? "http://localhost:3000";
+    const redirectUrl = buildCheckoutUrl({
+      reference: order.id,
+      amount: Number(order.total),
+      redirectUrl: `${appUrl}/checkout/exito?pedido=${order.number}`,
+      email: user.email ?? "",
+      fullName: address.fullName,
+    });
+    revalidatePath("/admin/pedidos");
+    return { ok: true, orderId: order.id, orderNumber: order.number, redirectUrl };
+  }
+
+  // Pago simulado (modo demostración, sin llaves de Wompi)
   const payment = await processMockPayment({
     amount: Number(order.total),
     method: paymentMethod,
