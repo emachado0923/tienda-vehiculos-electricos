@@ -16,5 +16,7 @@ storage
 *.md
 !README.md
 cloudbuild.yaml
+deploy
+.github
 Dockerfile
 .dockerignore

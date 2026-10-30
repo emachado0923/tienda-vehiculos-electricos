@@ -1,0 +1,54 @@
+# Push a main → construir la imagen aquí (el Droplet es pequeño para compilar Next.js)
+# → cargarla en el servidor por SSH → reiniciar con Docker Compose.
+# Secretos del repositorio: DO_HOST, DO_SSH_KEY (llave privada del usuario deploy)
+# y DO_KNOWN_HOSTS (salida de: ssh-keyscan IP).
+name: Desplegar en DigitalOcean
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency: produccion
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Construir la imagen
+        run: docker build -t emc-positive:${{ github.sha }} .
+
+      - name: Configurar SSH
+        env:
+          DO_SSH_KEY: ${{ secrets.DO_SSH_KEY }}
+          DO_KNOWN_HOSTS: ${{ secrets.DO_KNOWN_HOSTS }}
+        run: |
+          install -d -m 700 ~/.ssh
+          printf '%s\n' "$DO_SSH_KEY" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          printf '%s\n' "$DO_KNOWN_HOSTS" > ~/.ssh/known_hosts
+
+      - name: Copiar la imagen y los archivos de despliegue
+        env:
+          TARGET: deploy@${{ secrets.DO_HOST }}
+        run: |
+          docker save emc-positive:${{ github.sha }} | gzip | ssh "$TARGET" 'gunzip | docker load'
+          scp deploy/docker-compose.yml deploy/Caddyfile deploy/*.sh "$TARGET:/opt/emc/"
+
+      - name: Reiniciar los servicios
+        env:
+          TARGET: deploy@${{ secrets.DO_HOST }}
+        run: |
+          ssh "$TARGET" "cd /opt/emc \
+            && chmod +x *.sh \
+            && docker tag emc-positive:${{ github.sha }} emc-positive:current \
+            && docker compose up -d --remove-orphans \
+            && docker image prune -af --filter until=168h"
+
+      - name: Comprobar que la tienda responde
+        env:
+          TARGET: deploy@${{ secrets.DO_HOST }}
+        run: |
+          ssh "$TARGET" 'for i in $(seq 1 30); do curl -fsS -o /dev/null http://127.0.0.1:8081/ && exit 0; sleep 5; done; docker compose -f /opt/emc/docker-compose.yml logs --tail=50 app; exit 1'

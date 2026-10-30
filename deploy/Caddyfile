@@ -1,0 +1,9 @@
+# Caddy obtiene y renueva solo los certificados cuando el DNS ya apunta al servidor
+emc-positive.com {
+	encode zstd gzip
+	reverse_proxy app:8080
+}
+
+www.emc-positive.com {
+	redir https://emc-positive.com{uri} permanent
+}

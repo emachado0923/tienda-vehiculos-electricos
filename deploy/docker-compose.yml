@@ -1,0 +1,68 @@
+# =============================================================
+#  Producción en un Droplet de DigitalOcean: Caddy (HTTPS) → Next.js → MySQL
+#  Vive en /opt/emc junto con .env (lo genera setup-server.sh, fuera de git).
+#  La imagen emc-positive:current la carga el workflow de GitHub Actions.
+# =============================================================
+name: emc
+
+services:
+  db:
+    image: mysql:8.0
+    restart: always
+    # Sin puertos publicados: solo la alcanza el contenedor de la app
+    command:
+      - --character-set-server=utf8mb4
+      - --collation-server=utf8mb4_unicode_ci
+      - --innodb-buffer-pool-size=256M
+      - --performance-schema=OFF
+    environment:
+      MYSQL_DATABASE: tienda_emc
+      MYSQL_USER: tienda
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:?}
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:?}
+    volumes:
+      - mysql:/var/lib/mysql
+    healthcheck:
+      # Por TCP: durante la inicialización MySQL solo atiende por socket
+      test: ["CMD-SHELL", "mysqladmin ping --protocol=tcp -h 127.0.0.1 -u tienda -p\"$$MYSQL_PASSWORD\" --silent"]
+      interval: 10s
+      timeout: 5s
+      retries: 30
+
+  app:
+    image: emc-positive:current
+    restart: always
+    env_file: .env
+    environment:
+      # La clave se genera en hexadecimal: no necesita codificarse en la URL
+      DATABASE_URL: mysql://tienda:${MYSQL_PASSWORD}@db:3306/tienda_emc
+      AUTH_TRUST_HOST: "true"
+    depends_on:
+      db:
+        condition: service_healthy
+    # Solo en el propio servidor: cron y pruebas por túnel SSH antes de cambiar el DNS
+    ports:
+      - 127.0.0.1:8081:8080
+    volumes:
+      # Imágenes subidas desde el admin (storage/uploads) y correos sin SMTP (storage/emails)
+      - storage:/app/storage
+
+  caddy:
+    image: caddy:2
+    restart: always
+    depends_on:
+      - app
+    ports:
+      - 80:80
+      - 443:443
+      - 443:443/udp
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+
+volumes:
+  mysql:
+  storage:
+  caddy_data:
+  caddy_config:
