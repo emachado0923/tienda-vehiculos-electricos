@@ -4,23 +4,23 @@ on:
   push:
     branches: [main]
 
-env:
-  IMAGE: ghcr.io/${{ github.repository_owner }}/tienda-vehiculos-electricos
-
 jobs:
   deploy:
     name: Build & Deploy
     runs-on: ubuntu-latest
     permissions:
       contents: read
-      packages: write   # permite push a ghcr.io con GITHUB_TOKEN
+      packages: write
+
+    env:
+      IMAGE: ghcr.io/emachado0923/tienda-vehiculos-electricos
 
     steps:
       # ── 1. Código fuente ──────────────────────────────────────────────────
       - name: Checkout
         uses: actions/checkout@v4
 
-      # ── 2. BuildKit multi-plataforma ─────────────────────────────────────
+      # ── 2. BuildKit ───────────────────────────────────────────────────────
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
@@ -32,7 +32,7 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      # ── 4. Build + Push (etiqueta :latest y :<sha>) ───────────────────────
+      # ── 4. Build + Push ───────────────────────────────────────────────────
       - name: Build and push image
         uses: docker/build-push-action@v6
         with:
@@ -41,17 +41,12 @@ jobs:
           tags: |
             ${{ env.IMAGE }}:latest
             ${{ env.IMAGE }}:${{ github.sha }}
-          # Caché en GitHub Actions para acelerar builds sucesivos
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
-      # ── 5. Despliegue en el Droplet via SSH ───────────────────────────────
+      # ── 5. Deploy en el Droplet via SSH ───────────────────────────────────
       - name: Deploy to Droplet
         uses: appleboy/ssh-action@v1
-        env:
-          GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          GHCR_USER: ${{ github.actor }}
-          IMAGE: ${{ env.IMAGE }}
         with:
           host: ${{ secrets.DO_HOST }}
           username: ${{ secrets.DO_USERNAME }}
@@ -59,19 +54,12 @@ jobs:
           envs: GHCR_TOKEN,GHCR_USER,IMAGE
           script: |
             set -euo pipefail
-
-            # Autenticar en GHCR para poder hacer pull
             echo "$GHCR_TOKEN" | docker login ghcr.io -u "$GHCR_USER" --password-stdin
-
             cd /opt/tienda-emc
-
-            # Actualizar la imagen
             docker compose pull app
-
-            # Reiniciar solo el contenedor de la app (sin recrear DB ni Nginx)
             docker compose up -d --no-build --no-deps app
-
-            # Limpiar imágenes antiguas
             docker image prune -f
-
             echo "✅ Despliegue completado"
+        env:
+          GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GHCR_USER: ${{ github.actor }}
