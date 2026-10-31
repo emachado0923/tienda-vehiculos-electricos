@@ -8,59 +8,29 @@ on:
 jobs:
   deploy:
     name: Build & Deploy
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      packages: write
-
-    env:
-      IMAGE: ghcr.io/emachado0923/tienda-vehiculos-electricos
+    # Corre en el runner instalado en el Droplet (gratis, sin límite de minutos)
+    runs-on: self-hosted
 
     steps:
       # ── 1. Código fuente ──────────────────────────────────────────────────
       - name: Checkout
         uses: actions/checkout@v4
 
-      # ── 2. BuildKit ───────────────────────────────────────────────────────
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
+      # ── 2. Build de la imagen Docker ──────────────────────────────────────
+      - name: Build image
+        run: |
+          docker build -t tienda-emc:latest -t tienda-emc:${{ github.sha }} .
 
-      # ── 3. Login en GitHub Container Registry ────────────────────────────
-      - name: Log in to GHCR
-        uses: docker/login-action@v3
-        with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
+      # ── 3. Aplicar migraciones y reiniciar la app ─────────────────────────
+      - name: Deploy
+        run: |
+          set -euo pipefail
+          cd /opt/tienda-emc
 
-      # ── 4. Build + Push ───────────────────────────────────────────────────
-      - name: Build and push image
-        uses: docker/build-push-action@v6
-        with:
-          context: .
-          push: true
-          tags: |
-            ${{ env.IMAGE }}:latest
-            ${{ env.IMAGE }}:${{ github.sha }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+          # Actualizar la imagen en docker-compose con el tag del commit
+          docker compose up -d --no-deps --build app
 
-      # ── 5. Deploy en el Droplet via SSH ───────────────────────────────────
-      - name: Deploy to Droplet
-        uses: appleboy/ssh-action@v1
-        with:
-          host: ${{ secrets.DO_HOST }}
-          username: ${{ secrets.DO_USERNAME }}
-          key: ${{ secrets.DO_SSH_KEY }}
-          envs: GHCR_TOKEN,GHCR_USER,IMAGE
-          script: |
-            set -euo pipefail
-            echo "$GHCR_TOKEN" | docker login ghcr.io -u "$GHCR_USER" --password-stdin
-            cd /opt/tienda-emc
-            docker compose pull app
-            docker compose up -d --no-build --no-deps app
-            docker image prune -f
-            echo "✅ Despliegue completado"
-        env:
-          GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          GHCR_USER: ${{ github.actor }}
+          # Limpiar imágenes antiguas (conserva las 2 últimas)
+          docker image prune -f
+
+          echo "✅ Despliegue completado — $(date)"

@@ -16,7 +16,7 @@ services:
 
   # ── Aplicación Next.js ────────────────────────────────────────────────────
   app:
-    image: ghcr.io/emachado0923/tienda-vehiculos-electricos:latest
+    image: tienda-emc:latest
     restart: unless-stopped
     env_file: .env
     environment:
