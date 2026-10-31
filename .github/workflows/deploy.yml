@@ -21,16 +21,21 @@ jobs:
         run: |
           docker build -t tienda-emc:latest -t tienda-emc:${{ github.sha }} .
 
-      # ── 3. Aplicar migraciones y reiniciar la app ─────────────────────────
+      # ── 3. Sincronizar configs y reiniciar la app ────────────────────────
       - name: Deploy
         run: |
           set -euo pipefail
+
+          # Copiar configs actualizados desde el repo al directorio de la app
+          cp docker-compose.yml /opt/tienda-emc/docker-compose.yml
+          cp nginx/nginx.conf   /opt/tienda-emc/nginx/nginx.conf
+
           cd /opt/tienda-emc
 
-          # Actualizar la imagen en docker-compose con el tag del commit
-          docker compose up -d --no-deps --build app
+          # Levantar/reiniciar solo el contenedor de la app
+          docker compose up -d --no-deps app
 
-          # Limpiar imágenes antiguas (conserva las 2 últimas)
+          # Limpiar imágenes antiguas
           docker image prune -f
 
           echo "✅ Despliegue completado — $(date)"
